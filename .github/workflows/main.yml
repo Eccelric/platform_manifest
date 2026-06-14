@@ -1,0 +1,47 @@
+name: Build AOSP Automotive
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    
+    steps:
+      - name: Checkout manifest
+        run: |
+          mkdir -p ~/aosp
+          cd ~/aosp
+          
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git-core gnupg flex bison gperf sdl1.2-dev squashfs-tools build-essential zip curl libncurses5-dev zlib1g-dev openjdk-11-jdk python3
+          
+      - name: Setup Git
+        run: |
+          git config --global user.email "build@example.com"
+          git config --global user.name "Build Bot"
+          
+      - name: Clone AOSP
+        run: |
+          cd ~/aosp
+          repo init -u https://android.googlesource.com/platform/manifest -b android-automotiveos-15.0.0_lts5 --depth 1
+          repo sync -j4
+          
+      - name: Build
+        run: |
+          cd ~/aosp
+          source build/envsetup.sh
+          lunch generic_car_x86_64
+          m -j4
+          
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: aosp-build
+          path: |
+            ~/aosp/out/target/product/generic_car_x86_64/system.img
+            ~/aosp/out/target/product/generic_car_x86_64/vendor.img
+            ~/aosp/out/target/product/generic_car_x86_64/kernel
